@@ -38,6 +38,7 @@ export default function PoliciesPage() {
     try {
       await fetch("/api/policy", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(policy),
       });

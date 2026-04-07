@@ -23,6 +23,11 @@
  * - Map `provider` string to Auth0 connection IDs / Resource Indicators.
  * - Rotate and revoke via Auth0 Dashboard + Vault APIs on disconnect.
  *
+ * GitHub + AI agents: enable GitHub as a social connection with "Connected Accounts for Token Vault",
+ * configure the GitHub App callback to `https://<AUTH0_DOMAIN>/login/callback`, and use Auth0AI /
+ * `withTokenVault({ connection: "github", ... })` server-side so GitHub access tokens never touch
+ * the browser. Prefer GitHub App fine-grained permissions over ad-hoc OAuth scopes where applicable.
+ *
  * This MVP uses in-memory consent state in `lib/demo-store.ts` to simulate
  * vault-backed connections for demos and local development.
  */

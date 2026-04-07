@@ -29,6 +29,7 @@ export function CommandPanel({ onRan }: { onRan?: () => void }) {
     try {
       const res = await fetch("/api/agent", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ command: text }),
       });

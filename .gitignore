@@ -15,6 +15,7 @@
 /build
 
 # misc
+*.tsbuildinfo
 .DS_Store
 *.pem
 .env*.local

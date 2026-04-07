@@ -23,7 +23,7 @@ export function useDemoState() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/state");
+    const res = await fetch("/api/state", { credentials: "include" });
     const json = (await res.json()) as DemoState;
     setData(json);
   }, []);

@@ -20,6 +20,7 @@ export default function ConnectPage() {
   async function mutate(provider: ProviderId, action: "connect" | "revoke") {
     await fetch("/api/providers", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ provider, action }),
     });

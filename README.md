@@ -12,7 +12,7 @@ Delegated automation without strong authorization is unsafe. Users need a way to
 
 ## What VaultPilot demonstrates
 
-- **Auth0** for identity (simulated session in the MVP; integration points documented).
+- **Auth0** for identity (`@auth0/nextjs-auth0` v4 when env is set; otherwise a sandbox demo user).
 - **Auth0 Token Vault** as the **architectural backbone** for third-party access — tokens never live in React state or ad-hoc app storage (`lib/token-vault.ts`).
 - **Policy engine** + **risk engine** for deterministic decisions on every command.
 - **Approvals inbox** for high-risk flows (new external accounts, threshold breaches, night-window holds).
@@ -112,15 +112,43 @@ npm run test:watch  # watch mode
 
 Copy `.env.example` to `.env.local` when you add real Auth0 configuration.
 
+## Auth0 + GitHub (Token Vault for AI agents)
+
+VaultPilot’s finance flows use **mock providers**; this section is for wiring **real Auth0** and **GitHub as a connected account** when your agent needs GitHub API access (repos, issues, etc.) without storing provider tokens in the client.
+
+### GitHub App (github.com → Settings → Developer settings → GitHub Apps)
+
+Create or edit a GitHub App used by Auth0’s GitHub social connection:
+
+| Field | Value |
+|--------|--------|
+| **Homepage URL** | `https://vaultpilot.us.auth0.com` (your Auth0 tenant domain) |
+| **Callback URL** | `https://vaultpilot.us.auth0.com/login/callback` |
+| **Webhook** | Disabled (unless you need delivery to your own backend) |
+| **Permissions** | Set **fine-grained** permissions on the GitHub App; Token Vault holds tokens — scope lists in app code often stay minimal when the App defines access. |
+
+### Auth0 Dashboard
+
+1. **Authentication → Social → GitHub**: enable the connection and turn on **Connected Accounts for Token Vault** (so delegated GitHub tokens are vault-backed).
+2. **Applications → Vault Pilot**: set URIs for **this Next.js app** (not the GitHub callback above). With **`@auth0/nextjs-auth0` v4**, the SDK serves `/auth/login`, `/auth/logout`, `/auth/callback`, etc. via **middleware** (`middleware.ts`) and `lib/auth0.ts`. Typical local values:
+   - **Allowed Callback URLs**: `http://localhost:3000/auth/callback` (comma-separate production URLs).
+   - **Allowed Logout URLs**: `http://localhost:3000`, production origin.
+   - **Allowed Web Origins**: same origins as the app.
+
+When the four core Auth0 env vars are unset, the app stays in **demo mode** (no middleware auth). After you set them in `.env.local`, **POST** APIs require a session; use **Log in** in the top bar (or open `/auth/login`).
+
+Server-side, use Auth0’s AI / Token Vault patterns (e.g. `withTokenVault` with `connection: "github"`) so refresh and access tokens are exchanged only on the backend. See comments in `lib/token-vault.ts` and `lib/auth.ts`.
+
 ## Tech stack
 
 - Next.js (App Router), TypeScript, Tailwind CSS  
+- `@auth0/nextjs-auth0` (optional; see `.env.example` and `middleware.ts`)  
 - shadcn/ui-style primitives, lucide-react, Framer Motion, Recharts  
 - In-memory state via `lib/demo-store.ts` (resets on server restart)
 
 ## Future roadmap
 
-- Live Auth0 Universal Login + session middleware  
+- Stricter page-level protection when Auth0 is enabled (optional redirects from dashboard routes)  
 - Real Token Vault API calls and connection mapping  
 - Persistent audit store (append-only DB / event stream)  
 - Plaid / bill-pay aggregator adapters behind the same vault abstraction  

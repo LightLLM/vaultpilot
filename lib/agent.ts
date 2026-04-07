@@ -12,8 +12,8 @@ import { mockBilling, mockBank, mockSavings } from "@/lib/mock-providers";
 import { evaluatePolicy, isNightHour } from "@/lib/policy-engine";
 import { assessRisk } from "@/lib/risk-engine";
 import type { AgentCommandResult } from "@/lib/types";
+import type { AppUser } from "@/lib/auth";
 import { getDelegatedAccess } from "@/lib/token-vault";
-import { getCurrentUser } from "@/lib/auth";
 
 function billForKeyword(keyword?: string) {
   const bills = getBills();
@@ -25,8 +25,10 @@ function billForKeyword(keyword?: string) {
   return bills[0];
 }
 
-export function runAgentCommand(command: string): AgentCommandResult {
-  const user = getCurrentUser();
+export function runAgentCommand(
+  command: string,
+  user: AppUser,
+): AgentCommandResult {
   const policy = getPolicy();
   const intent = parseIntent(command);
   const accessBilling = getDelegatedAccess("mock_billing");
@@ -487,7 +489,10 @@ function blocked(message: string): AgentCommandResult {
   };
 }
 
-export function approvePending(id: string): { ok: boolean; message: string } {
+export function approvePending(
+  id: string,
+  user: AppUser,
+): { ok: boolean; message: string } {
   const pending = getApprovals().find((a) => a.id === id);
   if (!pending) return { ok: false, message: "Approval not found." };
   removeApproval(id);
@@ -495,7 +500,7 @@ export function approvePending(id: string): { ok: boolean; message: string } {
   if (pending.provider === "mock_bank" && pending.title.includes("External")) {
     const res = mockBank.createTransfer(pending.amount, "New External Account");
     logAudit({
-      user: getCurrentUser().email,
+      user: user.email,
       actionType: "external_transfer_executed",
       provider: "mock_bank",
       amount: pending.amount,
@@ -513,7 +518,7 @@ export function approvePending(id: string): { ok: boolean; message: string } {
     const payee = pending.payee ?? "MetroNet";
     const pay = mockBilling.executePayment(payee, pending.amount);
     logAudit({
-      user: getCurrentUser().email,
+      user: user.email,
       actionType: "bill_pay_executed",
       provider: "mock_billing",
       amount: pending.amount,
@@ -529,7 +534,7 @@ export function approvePending(id: string): { ok: boolean; message: string } {
   if (pending.provider === "mock_savings") {
     const res = mockSavings.moveToSavings(pending.amount, "Approved transfer");
     logAudit({
-      user: getCurrentUser().email,
+      user: user.email,
       actionType: "savings_transfer",
       provider: "mock_savings",
       amount: pending.amount,
@@ -545,12 +550,15 @@ export function approvePending(id: string): { ok: boolean; message: string } {
   return { ok: true, message: "Processed." };
 }
 
-export function rejectPending(id: string): { ok: boolean; message: string } {
+export function rejectPending(
+  id: string,
+  user: AppUser,
+): { ok: boolean; message: string } {
   const pending = getApprovals().find((a) => a.id === id);
   if (!pending) return { ok: false, message: "Approval not found." };
   removeApproval(id);
   logAudit({
-    user: getCurrentUser().email,
+    user: user.email,
     actionType: "approval_rejected",
     provider: pending.provider,
     amount: pending.amount,

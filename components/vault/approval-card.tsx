@@ -35,6 +35,7 @@ export function ApprovalCard({
     try {
       await fetch("/api/approvals", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: item.id, action }),
       });

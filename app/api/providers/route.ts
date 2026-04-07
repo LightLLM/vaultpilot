@@ -1,11 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   connectMockProvider,
   revokeProvider,
 } from "@/lib/token-vault";
 import type { ProviderId } from "@/lib/types";
+import { requireApiUser } from "@/lib/api-auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const gate = await requireApiUser(req);
+  if (gate instanceof NextResponse) return gate;
+
   const { provider, action } = (await req.json()) as {
     provider: ProviderId;
     action: "connect" | "revoke";

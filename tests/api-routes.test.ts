@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as postAgent } from "@/app/api/agent/route";
 import { POST as postApprovals } from "@/app/api/approvals/route";
@@ -8,6 +9,14 @@ import { POST as postProviders } from "@/app/api/providers/route";
 import { GET as getState } from "@/app/api/state/route";
 import { POST as postTransfers } from "@/app/api/mock/transfers/route";
 import { DEFAULT_POLICY } from "@/data/mock-data";
+
+function postJson(path: string, body: unknown) {
+  return new NextRequest(`http://localhost${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
 describe("API route handlers (README endpoints)", () => {
   beforeEach(() => {
@@ -34,12 +43,8 @@ describe("API route handlers (README endpoints)", () => {
   });
 
   it("POST /api/agent runs command and returns structured agent result", async () => {
-    const req = new Request("http://localhost/api/agent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        command: "Pay my internet bill if it's under $120",
-      }),
+    const req = postJson("/api/agent", {
+      command: "Pay my internet bill if it's under $120",
     });
     const res = await postAgent(req);
     expect(res.status).toBe(200);
@@ -52,22 +57,14 @@ describe("API route handlers (README endpoints)", () => {
   });
 
   it("POST /api/agent returns 400 when command missing", async () => {
-    const req = new Request("http://localhost/api/agent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    const req = postJson("/api/agent", {});
     const res = await postAgent(req);
     expect(res.status).toBe(400);
   });
 
   it("POST /api/policy persists policy", async () => {
     const next = { ...DEFAULT_POLICY, autoPayThreshold: 95 };
-    const req = new Request("http://localhost/api/policy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(next),
-    });
+    const req = postJson("/api/policy", next);
     const res = await postPolicy(req);
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -75,39 +72,29 @@ describe("API route handlers (README endpoints)", () => {
   });
 
   it("POST /api/approvals approve/reject", async () => {
-    const agentReq = new Request("http://localhost/api/agent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        command: "Transfer $1,200 to a new external account",
-      }),
+    const agentReq = postJson("/api/agent", {
+      command: "Transfer $1,200 to a new external account",
     });
     await postAgent(agentReq);
     const state = await (await getState()).json();
     const id = state.approvals[0].id;
-    const approveReq = new Request("http://localhost/api/approvals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action: "approve" }),
-    });
+    const approveReq = postJson("/api/approvals", { id, action: "approve" });
     const res = await postApprovals(approveReq);
     const json = await res.json();
     expect(json.ok).toBe(true);
   });
 
   it("POST /api/providers connect/revoke", async () => {
-    const revokeReq = new Request("http://localhost/api/providers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: "mock_savings", action: "revoke" }),
+    const revokeReq = postJson("/api/providers", {
+      provider: "mock_savings",
+      action: "revoke",
     });
     await postProviders(revokeReq);
     let state = await (await getState()).json();
     expect(state.connections.mock_savings.connected).toBe(false);
-    const connectReq = new Request("http://localhost/api/providers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: "mock_savings", action: "connect" }),
+    const connectReq = postJson("/api/providers", {
+      provider: "mock_savings",
+      action: "connect",
     });
     await postProviders(connectReq);
     state = await (await getState()).json();
@@ -122,20 +109,12 @@ describe("API route handlers (README endpoints)", () => {
 
   it("POST /api/mock/payments and transfers return sandbox confirmations", async () => {
     const pay = await postPayments(
-      new Request("http://localhost", {
-        method: "POST",
-        body: JSON.stringify({ payee: "Test", amount: 1 }),
-        headers: { "Content-Type": "application/json" },
-      }),
+      postJson("/api/mock/payments", { payee: "Test", amount: 1 }),
     );
     const payJson = await pay.json();
     expect(payJson.success).toBe(true);
     const tx = await postTransfers(
-      new Request("http://localhost", {
-        method: "POST",
-        body: JSON.stringify({ amount: 10, destination: "X" }),
-        headers: { "Content-Type": "application/json" },
-      }),
+      postJson("/api/mock/transfers", { amount: 10, destination: "X" }),
     );
     const txJson = await tx.json();
     expect(txJson.success).toBe(true);

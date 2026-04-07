@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { runAgentCommand } from "@/lib/agent";
+import { requireApiUser } from "@/lib/api-auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const auth = await requireApiUser(req);
+    if (auth instanceof NextResponse) return auth;
+
     const { command } = (await req.json()) as { command: string };
     if (!command?.trim()) {
       return NextResponse.json(
@@ -10,7 +14,7 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    const result = runAgentCommand(command);
+    const result = runAgentCommand(command, auth);
     return NextResponse.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Agent error";

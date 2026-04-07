@@ -1,30 +1,54 @@
 /**
- * Authentication — Auth0 (MVP simulation)
- * =======================================
- * Production: use `@auth0/nextjs-auth0` or Auth0 Universal Login with App Router.
- * Sessions should be established server-side; API routes validate the session
- * before any delegated action. Token Vault operations always occur server-side.
+ * Authentication — Auth0 (@auth0/nextjs-auth0) + demo fallback
+ * ==============================================================
+ * When `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, and `AUTH0_SECRET`
+ * are set, sessions are real; otherwise the app uses `DEMO_USER` (local/hackathon).
  *
- * Insert Auth0 configuration here:
- * - AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTH0_SECRET (session encryption)
- * - AUTH0_AUDIENCE if using APIs
- *
- * This demo uses a fixed sandbox user id for audit trails and UI labels.
+ * Login / logout: `<a href="/auth/login">` and `<a href="/auth/logout">` (SDK routes).
+ * Register callback in Auth0: `{APP_BASE_URL}/auth/callback`
  */
 
-export const DEMO_USER = {
+import type { NextRequest } from "next/server";
+import { getAuth0 } from "@/lib/auth0";
+
+export type AppUser = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+export const DEMO_USER: AppUser = {
   id: "auth0|vaultpilot-demo",
   email: "demo@vaultpilot.local",
   name: "Demo User",
 };
 
-export function getCurrentUser() {
-  // PRODUCTION: return session user from Auth0 SDK getSession()
-  return DEMO_USER;
+export function isAuth0Enabled(): boolean {
+  return Boolean(
+    process.env.AUTH0_SECRET?.trim() &&
+      process.env.AUTH0_CLIENT_ID?.trim() &&
+      process.env.AUTH0_CLIENT_SECRET?.trim() &&
+      process.env.AUTH0_DOMAIN?.trim(),
+  );
 }
 
-export function assertAuthenticated(): typeof DEMO_USER {
-  const u = getCurrentUser();
-  if (!u) throw new Error("Unauthorized");
-  return u;
+/**
+ * Current user for this request. Demo mode always returns `DEMO_USER`.
+ * With Auth0 enabled and no session, returns `null`.
+ */
+export async function getSessionUser(
+  req?: NextRequest,
+): Promise<AppUser | null> {
+  if (!isAuth0Enabled()) {
+    return DEMO_USER;
+  }
+  const auth0 = getAuth0();
+  const session = req ? await auth0.getSession(req) : await auth0.getSession();
+  const u = session?.user;
+  if (!u?.sub) return null;
+  return {
+    id: u.sub,
+    email: u.email ?? "",
+    name: u.name ?? u.email ?? "User",
+  };
 }
