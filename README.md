@@ -56,8 +56,8 @@ See **`lib/token-vault.ts`** for:
 
 | Route | Description |
 |--------|-------------|
-| `/` | Marketing / hero / architecture overview |
-| `/dashboard` | Metrics, chart, command panel, snapshot |
+| `/` | Marketing / hero / architecture overview (always public) |
+| `/dashboard` | Metrics, chart, command panel, snapshot (requires login when Auth0 env is set) |
 | `/connect` | Provider connections & scopes |
 | `/policies` | Policy controls |
 | `/approvals` | Pending human approvals |
@@ -135,7 +135,7 @@ Create or edit a GitHub App used by Auth0’s GitHub social connection:
    - **Allowed Logout URLs**: `http://localhost:3000`, production origin.
    - **Allowed Web Origins**: same origins as the app.
 
-When the four core Auth0 env vars are unset, the app stays in **demo mode** (no middleware auth). After you set them in `.env.local`, **POST** APIs require a session; use **Log in** in the top bar (or open `/auth/login`).
+When the four core Auth0 env vars are unset, the app stays in **demo mode** (no middleware auth). After you set them in `.env.local`, **POST** APIs require a session, and **app routes under `app/(authenticated)/`** (dashboard, connect, policies, approvals, activity, security) **redirect to `/auth/login`** (with `returnTo`) if there is no session. The marketing **home page** (`/`) stays public.
 
 Server-side, use Auth0’s AI / Token Vault patterns (e.g. `withTokenVault` with `connection: "github"`) so refresh and access tokens are exchanged only on the backend. See comments in `lib/token-vault.ts` and `lib/auth.ts`.
 
@@ -148,7 +148,6 @@ Server-side, use Auth0’s AI / Token Vault patterns (e.g. `withTokenVault` with
 
 ## Future roadmap
 
-- Stricter page-level protection when Auth0 is enabled (optional redirects from dashboard routes)  
 - Real Token Vault API calls and connection mapping  
 - Persistent audit store (append-only DB / event stream)  
 - Plaid / bill-pay aggregator adapters behind the same vault abstraction  

@@ -1,5 +1,4 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuth0 } from "./lib/auth0";
 
 function auth0Configured(): boolean {
@@ -12,10 +11,21 @@ function auth0Configured(): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+
+  const requestWithPath = new NextRequest(request.url, {
+    headers: requestHeaders,
+    method: request.method,
+  });
+
   if (!auth0Configured()) {
-    return NextResponse.next();
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   }
-  return getAuth0().middleware(request);
+
+  return getAuth0().middleware(requestWithPath);
 }
 
 export const config = {
